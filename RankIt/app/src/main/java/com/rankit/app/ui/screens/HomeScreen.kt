@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rankit.app.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rankit.app.data.model.Poll
 import com.rankit.app.data.model.PollCategory
 import com.rankit.app.ui.components.CategoryChip
@@ -35,20 +36,15 @@ fun HomeScreen(
     onPollClick: (Poll) -> Unit,
     onCreateClick: () -> Unit
 ) {
-    val polls by viewModel.polls.collectAsState()
-    val selectedCategory by viewModel.selectedCategory.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val snackbarMessage by viewModel.snackbarMessage.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(snackbarMessage) {
-        snackbarMessage?.let {
+    LaunchedEffect(uiState.snackbarMessage) {
+        uiState.snackbarMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearSnackbar()
         }
     }
-
-    val filteredPolls = viewModel.getFilteredPolls(polls)
 
     Scaffold(
         containerColor = BackgroundDark,
@@ -116,7 +112,6 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                            // ── Notifications button ─────────────────────
                             IconButton(
                                 onClick = {},
                                 modifier = Modifier
@@ -131,7 +126,7 @@ fun HomeScreen(
 
                         // Search bar
                         OutlinedTextField(
-                            value = searchQuery,
+                            value = uiState.searchQuery,
                             onValueChange = { viewModel.setSearchQuery(it) },
                             placeholder = { Text("Search polls...", color = TextMuted, fontSize = 13.sp) },
                             leadingIcon = { Icon(Icons.Default.Search, null, tint = TextMuted) },
@@ -162,7 +157,7 @@ fun HomeScreen(
                         CategoryChip(
                             label = category.displayName,
                             emoji = category.emoji,
-                            selected = selectedCategory == category,
+                            selected = uiState.selectedCategory == category,
                             onClick = { viewModel.setCategory(category) }
                         )
                     }
@@ -176,7 +171,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        if (selectedCategory == PollCategory.ALL) "All Polls" else "${selectedCategory.displayName} Polls",
+                        if (uiState.selectedCategory == PollCategory.ALL) "All Polls" else "${uiState.selectedCategory.displayName} Polls",
                         color = TextSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -184,7 +179,7 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        "${filteredPolls.size} polls",
+                        "${uiState.polls.size} polls",
                         color = TextMuted,
                         fontSize = 11.sp
                     )
@@ -193,7 +188,7 @@ fun HomeScreen(
             }
 
             // Poll cards
-            if (filteredPolls.isEmpty()) {
+            if (uiState.polls.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
@@ -210,7 +205,7 @@ fun HomeScreen(
                     }
                 }
             } else {
-                items(filteredPolls, key = { it.id }) { poll ->
+                items(uiState.polls, key = { it.id }) { poll ->
                     PollCard(
                         poll = poll,
                         onClick = { onPollClick(poll) },

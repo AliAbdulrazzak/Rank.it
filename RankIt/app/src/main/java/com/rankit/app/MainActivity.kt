@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,27 +18,27 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rankit.app.data.model.Poll
-import com.rankit.app.ui.screens.CreatePollScreen
-import com.rankit.app.ui.screens.HomeScreen
-import com.rankit.app.ui.screens.PollDetailScreen
+import com.rankit.app.ui.screens.*
 import com.rankit.app.ui.theme.BackgroundDark
-import com.rankit.app.ui.theme.CardBorder
 import com.rankit.app.ui.theme.RankItTheme
 import com.rankit.app.ui.theme.TextMuted
-import com.rankit.app.ui.theme.TextPrimary
-import com.rankit.app.ui.theme.TextSecondary
 import com.rankit.app.ui.theme.AccentPurple
 import com.rankit.app.viewmodel.PollViewModel
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
+    object Trending : Screen("trending")
     object PollDetail : Screen("poll_detail")
     object CreatePoll : Screen("create_poll")
     object Profile : Screen("profile")
+    object Settings : Screen("settings")
 }
 
 class MainActivity : ComponentActivity() {
@@ -60,13 +59,22 @@ class MainActivity : ComponentActivity() {
 fun RankItApp(viewModel: PollViewModel) {
     val navController = rememberNavController()
     var selectedPoll by remember { mutableStateOf<Poll?>(null) }
-    var selectedTab by remember { mutableStateOf(0) }
 
     val tabs = listOf(
-        Pair("Home", Icons.Default.Home),
-        Pair("Trending", Icons.Default.Star),
-        Pair("Profile", Icons.Default.Person),
-        Pair("Settings", Icons.Default.Settings)
+        Triple("Home", Icons.Default.Home, Screen.Home.route),
+        Triple("Trending", Icons.Default.Star, Screen.Trending.route),
+        Triple("Profile", Icons.Default.Person, Screen.Profile.route),
+        Triple("Settings", Icons.Default.Settings, Screen.Settings.route)
+    )
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    val routeOrder = listOf(
+        Screen.Home.route,
+        Screen.Trending.route,
+        Screen.Profile.route,
+        Screen.Settings.route
     )
 
     Scaffold(
@@ -77,13 +85,20 @@ fun RankItApp(viewModel: PollViewModel) {
                 tonalElevation = 0.dp,
                 modifier = Modifier.clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
             ) {
-                tabs.forEachIndexed { index, (label, icon) ->
+                tabs.forEach { (label, icon, route) ->
+                    val isSelected = currentDestination?.hierarchy?.any { it.route == route } == true
+
                     NavigationBarItem(
-                        selected = selectedTab == index,
+                        selected = isSelected,
                         onClick = {
-                            selectedTab = index
-                            if (index == 0) navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Home.route) { inclusive = true }
+                            if (!isSelected) {
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
                         },
                         icon = {
@@ -111,12 +126,36 @@ fun RankItApp(viewModel: PollViewModel) {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(paddingValues),
             enterTransition = {
-                slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) +
-                        fadeIn(animationSpec = tween(300))
+                val initialStateOrder = routeOrder.indexOf(initialState.destination.route)
+                val targetStateOrder = routeOrder.indexOf(targetState.destination.route)
+
+                if (initialStateOrder != -1 && targetStateOrder != -1) {
+                    if (targetStateOrder > initialStateOrder) {
+                        slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) +
+                                fadeIn(animationSpec = tween(300))
+                    } else {
+                        slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300)) +
+                                fadeIn(animationSpec = tween(300))
+                    }
+                } else {
+                    fadeIn(animationSpec = tween(300))
+                }
             },
             exitTransition = {
-                slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(300)) +
-                        fadeOut(animationSpec = tween(300))
+                val initialStateOrder = routeOrder.indexOf(initialState.destination.route)
+                val targetStateOrder = routeOrder.indexOf(targetState.destination.route)
+
+                if (initialStateOrder != -1 && targetStateOrder != -1) {
+                    if (targetStateOrder > initialStateOrder) {
+                        slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(300)) +
+                                fadeOut(animationSpec = tween(300))
+                    } else {
+                        slideOutHorizontally(targetOffsetX = { it / 3 }, animationSpec = tween(300)) +
+                                fadeOut(animationSpec = tween(300))
+                    }
+                } else {
+                    fadeOut(animationSpec = tween(300))
+                }
             },
             popEnterTransition = {
                 slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = tween(300)) +
@@ -128,7 +167,6 @@ fun RankItApp(viewModel: PollViewModel) {
             }
         ) {
             composable(Screen.Home.route) {
-                selectedTab = 0
                 HomeScreen(
                     viewModel = viewModel,
                     onPollClick = { poll ->
@@ -137,6 +175,15 @@ fun RankItApp(viewModel: PollViewModel) {
                     },
                     onCreateClick = {
                         navController.navigate(Screen.CreatePoll.route)
+                    }
+                )
+            }
+            composable(Screen.Trending.route) {
+                TrendingScreen(
+                    viewModel = viewModel,
+                    onPollClick = { poll ->
+                        selectedPoll = poll
+                        navController.navigate(Screen.PollDetail.route)
                     }
                 )
             }
@@ -153,6 +200,20 @@ fun RankItApp(viewModel: PollViewModel) {
                 CreatePollScreen(
                     viewModel = viewModel,
                     onDismiss = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    viewModel = viewModel,
+                    onPollClick = { poll ->
+                        selectedPoll = poll
+                        navController.navigate(Screen.PollDetail.route)
+                    }
+                )
+            }
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    viewModel = viewModel
                 )
             }
         }
