@@ -6,15 +6,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // Dark color palette
-val Purple80 = Color(0xFF7C3AED)
+val Purple80 = Color(0xFFDC2626)
 val PurpleGrey80 = Color(0xFF4B5563)
-val Pink80 = Color(0xFF2563EB)
+val Pink80 = Color(0xFF16A34A)
 
 val BackgroundDark = Color(0xFF0A0A0F)
 val SurfaceDark = Color(0xFF13131F)
 val SurfaceVariantDark = Color(0xFF1E1E2E)
-val AccentPurple = Color(0xFF7C3AED)
-val AccentBlue = Color(0xFF2563EB)
+val AccentPurple = Color(0xFFDC2626)
+val AccentBlue = Color(0xFF16A34A)
 val TextPrimary = Color(0xFFFFFFFF)
 val TextSecondary = Color(0xFF9CA3AF)
 val TextMuted = Color(0xFF4B5563)
