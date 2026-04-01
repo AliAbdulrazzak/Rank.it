@@ -5,25 +5,37 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -57,13 +69,14 @@ data class Poll(
 
 // 2. ViewModel - Managing State and Business Logic
 class PollViewModel : ViewModel() {
-    // List of categories for filtering
-    val categories = listOf("All", "Food", "Sports", "Gaming", "Movies")
+    private val _categories = MutableStateFlow(listOf("All", "Food", "Sports", "Gaming", "Movies"))
+    val categories: StateFlow<List<String>> = _categories.asStateFlow()
 
     private val _selectedCategory = MutableStateFlow("All")
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
-    // UI State held in StateFlow - now with multiple polls
+    private var nextId = 11
+
     private val _polls = MutableStateFlow(
         listOf(
             Poll(
@@ -103,6 +116,19 @@ class PollViewModel : ViewModel() {
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun addCategory(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isNotEmpty() && !_categories.value.contains(trimmed)) {
+            _categories.update { it + trimmed }
+        }
+    }
+
+    fun addPoll(title: String, category: String, optionNames: List<String>) {
+        val options = optionNames.map { name -> PollOption(nextId++, name, 0) }
+        val poll = Poll(nextId++, title.trim(), category, options)
+        _polls.update { it + poll }
     }
 
     // Business Logic - Upvote
@@ -159,51 +185,238 @@ fun PollScreen(
     viewModel: PollViewModel = viewModel()
 ) {
     val allPolls by viewModel.polls.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
 
-    // Filter polls based on selected category
+    var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var showAddPollDialog by remember { mutableStateOf(false) }
+
     val filteredPolls = if (selectedCategory == "All") {
         allPolls
     } else {
         allPolls.filter { it.category == selectedCategory }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-    ) {
-        // Category Selection UI
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(viewModel.categories) { category ->
-                FilterChip(
-                    selected = selectedCategory == category,
-                    onClick = { viewModel.selectCategory(category) },
-                    label = { Text(category) }
-                )
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Category row with "+" button at the end
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items(categories) { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = { viewModel.selectCategory(category) },
+                        label = { Text(category) }
+                    )
+                }
+                item {
+                    Button(
+                        onClick = { showAddCategoryDialog = true },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary
+                        )
+                    ) {
+                        Text("+ Category")
+                    }
+                }
+            }
+
+            // List of polls
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 80.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(filteredPolls, key = { it.id }) { poll ->
+                    PollCard(
+                        poll = poll,
+                        onUpvote = { optionId -> viewModel.upvote(poll.id, optionId) },
+                        onDownvote = { optionId -> viewModel.downvote(poll.id, optionId) }
+                    )
+                }
             }
         }
 
-        // List of polls
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        // FAB to add a new poll
+        FloatingActionButton(
+            onClick = { showAddPollDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.primary
         ) {
-            items(filteredPolls, key = { it.id }) { poll ->
-                PollCard(
-                    poll = poll,
-                    onUpvote = { optionId -> viewModel.upvote(poll.id, optionId) },
-                    onDownvote = { optionId -> viewModel.downvote(poll.id, optionId) }
-                )
-            }
+            Text(
+                text = "+",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
         }
     }
+
+    if (showAddCategoryDialog) {
+        AddCategoryDialog(
+            onDismiss = { showAddCategoryDialog = false },
+            onConfirm = { name ->
+                viewModel.addCategory(name)
+                showAddCategoryDialog = false
+            }
+        )
+    }
+
+    if (showAddPollDialog) {
+        AddPollDialog(
+            categories = categories.filter { it != "All" },
+            onDismiss = { showAddPollDialog = false },
+            onConfirm = { title, category, options ->
+                viewModel.addPoll(title, category, options)
+                showAddPollDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun AddCategoryDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New Category") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Category name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onConfirm(name) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddPollDialog(
+    categories: List<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, List<String>) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf(categories.firstOrNull() ?: "") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    val options = remember { mutableStateListOf("", "") }
+
+    val validOptions = options.filter { it.isNotBlank() }
+    val canSubmit = title.isNotBlank() && selectedCategory.isNotEmpty() && validOptions.size >= 2
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New Poll") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Poll title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                if (categories.isEmpty()) {
+                    Text(
+                        text = "Add a category first using the + Category button.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    ExposedDropdownMenuBox(
+                        expanded = dropdownExpanded,
+                        onExpandedChange = { dropdownExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedCategory,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Category") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false }
+                        ) {
+                            categories.forEach { cat ->
+                                DropdownMenuItem(
+                                    text = { Text(cat) },
+                                    onClick = {
+                                        selectedCategory = cat
+                                        dropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text("Options (min. 2)", style = MaterialTheme.typography.labelLarge)
+
+                options.forEachIndexed { idx, opt ->
+                    OutlinedTextField(
+                        value = opt,
+                        onValueChange = { options[idx] = it },
+                        label = { Text("Option ${idx + 1}") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                    )
+                }
+
+                TextButton(onClick = { options.add("") }) {
+                    Text("+ Add Option")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (canSubmit) onConfirm(title, selectedCategory, validOptions) },
+                enabled = canSubmit
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -212,7 +425,6 @@ fun PollCard(
     onUpvote: (Int) -> Unit,
     onDownvote: (Int) -> Unit
 ) {
-    // Dynamic reordering based on votes descending
     val sortedOptions = poll.options.sortedByDescending { it.votes }
 
     Card(
