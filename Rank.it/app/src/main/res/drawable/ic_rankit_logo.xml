@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- White circle background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54m-46,0a46,46,0,1,0,92,0a46,46,0,1,0,-92,0"/>
+
+    <!-- Left bar (2nd place) – red, rounded top -->
+    <path
+        android:fillColor="#DC2626"
+        android:pathData="M14,58 Q14,55 17,55 L31,55 Q34,55 34,58 L34,80 L14,80 Z"/>
+
+    <!-- Center bar (1st place) – green, rounded top -->
+    <path
+        android:fillColor="#16A34A"
+        android:pathData="M40,36 Q40,32 44,32 L64,32 Q68,32 68,36 L68,80 L40,80 Z"/>
+
+    <!-- Right bar (3rd place) – red, rounded top -->
+    <path
+        android:fillColor="#DC2626"
+        android:pathData="M72,65 Q72,62 75,62 L87,62 Q90,62 90,65 L90,80 L72,80 Z"/>
+
+    <!-- Base platform -->
+    <path
+        android:fillColor="#374151"
+        android:pathData="M16,80 L92,80 L92,84 L16,84 Z"/>
+
+    <!-- Gold star above center bar -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M54,16 L56.06,21.17 L61.61,21.53 L57.33,25.08 L58.70,30.47 L54,27.5 L49.30,30.47 L50.67,25.08 L46.39,21.53 L51.94,21.17 Z"/>
+
+</vector>
