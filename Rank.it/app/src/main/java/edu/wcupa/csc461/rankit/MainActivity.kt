@@ -231,6 +231,28 @@ fun RankItApp() {
     }
 }
 
+fun categoryEmoji(category: String): String = when (category.lowercase()) {
+    "all"        -> "🌐"
+    "food"       -> "🍔"
+    "sports"     -> "⚽"
+    "gaming"     -> "🎮"
+    "movies"     -> "🎬"
+    "music"      -> "🎵"
+    "travel"     -> "✈️"
+    "tech"       -> "💻"
+    "science"    -> "🔬"
+    "art"        -> "🎨"
+    "fashion"    -> "👗"
+    "health"     -> "💪"
+    "animals"    -> "🐾"
+    "politics"   -> "🗳️"
+    "education"  -> "📚"
+    "finance"    -> "💰"
+    "nature"     -> "🌿"
+    "news"       -> "📰"
+    else         -> "📌"
+}
+
 @Composable
 fun PollScreen(
     modifier: Modifier = Modifier,
@@ -265,7 +287,7 @@ fun PollScreen(
                     FilterChip(
                         selected = selectedCategory == category,
                         onClick = { viewModel.selectCategory(category) },
-                        label = { Text(category) }
+                        label = { Text("${categoryEmoji(category)} $category") }
                     )
                 }
                 item {
@@ -535,7 +557,7 @@ fun PollCard(
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(
-                text = poll.category,
+                text = "${categoryEmoji(poll.category)} ${poll.category}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.padding(bottom = 8.dp)
