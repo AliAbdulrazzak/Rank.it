@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "156123553306",
+    "firebase_url": "https://rankit-csc461-default-rtdb.firebaseio.com",
+    "project_id": "rankit-csc461",
+    "storage_bucket": "rankit-csc461.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156123553306:android:958de552c631b763783ba3",
+        "android_client_info": {
+          "package_name": "edu.wcupa.csc461.rankit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCs6o1K-cB-SRFmp2CIh7aqqz5ZkJeGW3w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
