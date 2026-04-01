@@ -138,6 +138,18 @@ class PollViewModel : ViewModel() {
         _polls.update { it + poll }
     }
 
+    fun addOption(pollId: Int, optionName: String) {
+        val trimmed = optionName.trim()
+        if (trimmed.isEmpty()) return
+        _polls.update { currentPolls ->
+            currentPolls.map { poll ->
+                if (poll.id == pollId) {
+                    poll.copy(options = poll.options + PollOption(nextId++, trimmed, 0))
+                } else poll
+            }
+        }
+    }
+
     // Business Logic - Upvote
     fun upvote(pollId: Int, optionId: Int) {
         _polls.update { currentPolls ->
@@ -230,6 +242,7 @@ fun PollScreen(
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showAddPollDialog by remember { mutableStateOf(false) }
+    var addOptionPollId by remember { mutableStateOf<Int?>(null) }
 
     val filteredPolls = if (selectedCategory == "All") {
         allPolls
@@ -278,7 +291,8 @@ fun PollScreen(
                     PollCard(
                         poll = poll,
                         onUpvote = { optionId -> viewModel.upvote(poll.id, optionId) },
-                        onDownvote = { optionId -> viewModel.downvote(poll.id, optionId) }
+                        onDownvote = { optionId -> viewModel.downvote(poll.id, optionId) },
+                        onAddOption = { addOptionPollId = poll.id }
                     )
                 }
             }
@@ -317,6 +331,16 @@ fun PollScreen(
             onConfirm = { title, category, options ->
                 viewModel.addPoll(title, category, options)
                 showAddPollDialog = false
+            }
+        )
+    }
+
+    addOptionPollId?.let { pollId ->
+        AddOptionDialog(
+            onDismiss = { addOptionPollId = null },
+            onConfirm = { name ->
+                viewModel.addOption(pollId, name)
+                addOptionPollId = null
             }
         )
     }
@@ -460,10 +484,44 @@ fun AddPollDialog(
 }
 
 @Composable
+fun AddOptionDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Option") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Option name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onConfirm(name) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
 fun PollCard(
     poll: Poll,
     onUpvote: (Int) -> Unit,
-    onDownvote: (Int) -> Unit
+    onDownvote: (Int) -> Unit,
+    onAddOption: () -> Unit
 ) {
     val sortedOptions = poll.options.sortedByDescending { it.votes }
 
@@ -489,6 +547,13 @@ fun PollCard(
                     onUpvote = { onUpvote(option.id) },
                     onDownvote = { onDownvote(option.id) }
                 )
+            }
+
+            TextButton(
+                onClick = onAddOption,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                Text("+ Add Option")
             }
         }
     }
