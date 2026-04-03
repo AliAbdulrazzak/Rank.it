@@ -1,8 +1,14 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services")
     alias(libs.plugins.kotlin.android)
+}
+
+val googleServicesFile = project.layout.projectDirectory.file("google-services.json").asFile
+if (googleServicesFile.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.warn("google-services.json not found in ${googleServicesFile.path}; skipping Google Services plugin")
 }
 
 android {
