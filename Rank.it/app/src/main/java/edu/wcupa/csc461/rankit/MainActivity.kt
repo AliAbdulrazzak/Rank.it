@@ -1,5 +1,6 @@
 package edu.wcupa.csc461.rankit
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -50,7 +51,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import db
@@ -69,57 +70,60 @@ data class PollOption(
 
 data class Poll(
     val id: Int,
+    val firestoreId: String = "",
     val title: String,
     val category: String,
     val options: List<PollOption>
 )
 
 // 2. ViewModel - Managing State and Business Logic
-class PollViewModel : ViewModel() {
-    private val _categories = MutableStateFlow(listOf("All", "Food", "Sports", "Gaming", "Movies"))
+class PollViewModel(application: Application) : AndroidViewModel(application) {
+    private val database = db.getInstance(application)
+
+    private val defaultCategories = listOf("All", "Food", "Sports", "Gaming", "Movies")
+
+    private val _categories = MutableStateFlow(defaultCategories)
     val categories: StateFlow<List<String>> = _categories.asStateFlow()
 
     private val _selectedCategory = MutableStateFlow("All")
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
-    private var nextId = 11
+    private var nextId = 1
 
-    private val _polls = MutableStateFlow(
-        listOf(
-            Poll(
-                id = 1,
-                title = "Best Fruits",
-                category = "Food",
-                options = listOf(
-                    PollOption(1, "Apple", 0),
-                    PollOption(2, "Banana", 0),
-                    PollOption(3, "Orange", 0),
-                    PollOption(4, "Grape", 0)
-                )
-            ),
-            Poll(
-                id = 2,
-                title = "Favorite Sport",
-                category = "Sports",
-                options = listOf(
-                    PollOption(5, "Soccer", 0),
-                    PollOption(6, "Basketball", 0),
-                    PollOption(7, "Tennis", 0)
-                )
-            ),
-            Poll(
-                id = 3,
-                title = "Top Gaming Consoles",
-                category = "Gaming",
-                options = listOf(
-                    PollOption(8, "PS5", 0),
-                    PollOption(9, "Xbox Series X", 0),
-                    PollOption(10, "Nintendo Switch", 0)
-                )
-            )
-        )
-    )
+    private val _polls = MutableStateFlow(emptyList<Poll>())
     val polls: StateFlow<List<Poll>> = _polls.asStateFlow()
+
+    init {
+        loadFromDb()
+    }
+
+    private fun loadFromDb() {
+        // Load user-added filter categories, merge with defaults
+        database.loadFilterCategories { dbCategories ->
+            if (dbCategories.isNotEmpty()) {
+                val merged = defaultCategories + dbCategories.filter { it !in defaultCategories }
+                _categories.value = merged
+            }
+        }
+
+        // Load polls with their options from Firestore
+        database.loadPolls { dbPolls ->
+            if (dbPolls.isNotEmpty()) {
+                val polls = dbPolls.map { dbPoll ->
+                    Poll(
+                        id = nextId++,
+                        firestoreId = dbPoll.firestoreId,
+                        title = dbPoll.title,
+                        category = dbPoll.filterCategory,
+                        options = dbPoll.options.map { opt ->
+                            PollOption(nextId++, opt.name, opt.score)
+                        }
+                    )
+                }
+                _polls.value = polls
+            }
+        }
+    }
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
@@ -129,13 +133,22 @@ class PollViewModel : ViewModel() {
         val trimmed = name.trim()
         if (trimmed.isNotEmpty() && !_categories.value.contains(trimmed)) {
             _categories.update { it + trimmed }
+            database.createFilterCategory(trimmed)
         }
     }
 
     fun addPoll(title: String, category: String, optionNames: List<String>) {
+        val localId = nextId++
         val options = optionNames.map { name -> PollOption(nextId++, name, 0) }
-        val poll = Poll(nextId++, title.trim(), category, options)
+        val poll = Poll(localId, "", title.trim(), category, options)
         _polls.update { it + poll }
+
+        database.createCategory(title.trim(), category) { firestoreId ->
+            _polls.update { polls ->
+                polls.map { p -> if (p.id == localId) p.copy(firestoreId = firestoreId) else p }
+            }
+            optionNames.forEach { optionName -> database.addOption(firestoreId, optionName) }
+        }
     }
 
     fun addOption(pollId: Int, optionName: String) {
@@ -147,6 +160,11 @@ class PollViewModel : ViewModel() {
                     poll.copy(options = poll.options + PollOption(nextId++, trimmed, 0))
                 } else poll
             }
+        }
+
+        val firestoreId = _polls.value.find { it.id == pollId }?.firestoreId
+        if (!firestoreId.isNullOrEmpty()) {
+            database.addOption(firestoreId, trimmed)
         }
     }
 
@@ -182,8 +200,6 @@ class PollViewModel : ViewModel() {
 }
 
 class MainActivity : ComponentActivity() {
-
-    private lateinit var db: db
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
