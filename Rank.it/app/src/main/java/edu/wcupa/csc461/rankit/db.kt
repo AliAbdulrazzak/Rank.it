@@ -18,6 +18,7 @@ class db private constructor(context: Context) {
             return instance!!
         }
     }
+    // SECTION 1 : HANDLE WRITING TO DB
 // handle calls to create a new voting category. takes one argument for name
     fun createCategory(name: String) {
         val category = hashMapOf(
@@ -68,9 +69,61 @@ class db private constructor(context: Context) {
             .addOnFailureListener { Log.e("TEST", "Vote failed", it) }
         }
 
-        fun listen(categoryId: String) {
-            firestore.collection("categories")
-                .document(categoryId)
-                .collection("options")
+    fun listen(categoryId: String) {
+        firestore.collection("categories")
+            .document(categoryId)
+            .collection("options")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("TEST", "Listen failed", error)
+                    return@addSnapshotListener
                 }
+
+                Log.d("TEST", "---- LIVE UPDATE ----")
+
+                for (doc in snapshot!!) {
+                    val name = doc.getString("name")
+                    val score = doc.getLong("score")
+
+                    Log.d("TEST", "$name -> $score")
+                }
+            }
+    }
+
+    // SECTION 2 : READING FROM DB
+
+    fun getCategories() {
+        firestore.collection("categories")
+            .get()
+            .addOnSuccessListener { result ->
+                for (doc in result) {
+                    val id = doc.id
+                    val name = doc.getString("name")
+
+                    Log.d("TEST", "Category: $name (id: $id)")
+                }
+            }
+            .addOnFailureListener {
+                Log.e("TEST", "Error getting categories", it)
+            }
+    }
+
+    fun getOptions(categoryId: String) {
+        firestore.collection("categories")
+            .document(categoryId)
+            .collection("options")
+            .get()
+            .addOnSuccessListener { result ->
+                for (doc in result) {
+                    val id = doc.id
+                    val name = doc.getString("name")
+                    val score = doc.getLong("score")
+
+                    Log.d("TEST", "Option: $name | Score: $score | id: $id")
+                }
+            }
+            .addOnFailureListener {
+                Log.e("TEST", "Error getting options", it)
+            }
+    }
 }
