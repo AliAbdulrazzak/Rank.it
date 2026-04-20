@@ -69,23 +69,23 @@ class db private constructor(context: Context) {
             .addOnFailureListener { Log.e("TEST", "Error", it) }
     }
 // manages votes placed on existing options
-    fun vote(categoryId: String, optionId: String) {
-        if (prefs.getBoolean(optionId, false)) {
-            Log.d("TEST", "Already voted")
-            return
-        }
+fun vote(categoryId: String, optionId: String) {
+    if (prefs.getBoolean(optionId, false)) {
+        Log.d("TEST", "Already voted")
+        return
+    }
 
-        firestore.collection("categories")
-            .document(categoryId)
-            .collection("options")
-            .document(optionId)
-            .update("score", FieldValue.increment(1))
-            .addOnSuccessListener {
-                Log.d("TEST", "Vote recorded")
-                prefs.edit().putBoolean(optionId, true).apply()
-            }
-            .addOnFailureListener { Log.e("TEST", "Vote failed", it) }
+    firestore.collection("categories")
+        .document(categoryId)
+        .collection("options")
+        .document(optionId)
+        .update("score", FieldValue.increment(1))
+        .addOnSuccessListener {
+            Log.d("TEST", "Vote recorded")
+            prefs.edit().putBoolean(optionId, true).apply()
         }
+        .addOnFailureListener { Log.e("TEST", "Vote failed", it) }
+}
 
     fun listen(categoryId: String) {
         firestore.collection("categories")

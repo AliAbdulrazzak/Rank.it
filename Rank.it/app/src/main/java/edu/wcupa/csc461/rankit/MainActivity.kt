@@ -1,6 +1,7 @@
 package edu.wcupa.csc461.rankit
 
 import android.app.Application
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -47,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,10 +62,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+
 //test
 // 1. Data Models
 data class PollOption(
     val id: Int,
+    val firestoreId: String = "",
     val name: String,
     val votes: Int
 )
@@ -116,7 +120,12 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
                         title = dbPoll.title,
                         category = dbPoll.filterCategory,
                         options = dbPoll.options.map { opt ->
-                            PollOption(nextId++, opt.name, opt.score)
+                            PollOption(
+                                id = nextId++,
+                                firestoreId = opt.firestoreId,
+                                name = opt.name,
+                                votes = opt.score
+                            )
                         }
                     )
                 }
@@ -139,7 +148,12 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addPoll(title: String, category: String, optionNames: List<String>) {
         val localId = nextId++
-        val options = optionNames.map { name -> PollOption(nextId++, name, 0) }
+        val options = optionNames.map { name -> PollOption(
+            id = nextId++,
+            firestoreId = "",
+            name = name,
+            votes = 0
+        ) }
         val poll = Poll(localId, "", title.trim(), category, options)
         _polls.update { it + poll }
 
@@ -157,7 +171,10 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
         _polls.update { currentPolls ->
             currentPolls.map { poll ->
                 if (poll.id == pollId) {
-                    poll.copy(options = poll.options + PollOption(nextId++, trimmed, 0))
+                    poll.copy(options = poll.options + PollOption(
+                        nextId++, trimmed, "0",
+                        votes = 0
+                    ))
                 } else poll
             }
         }
@@ -180,6 +197,19 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 } else poll
             }
+        }
+        val firestoreId = _polls.value
+            .find { it.id == pollId }
+            ?.firestoreId
+
+        val optionFirestoreId = _polls.value
+            .find { it.id == pollId }
+            ?.options
+            ?.find { it.id == optionId }
+            ?.firestoreId
+
+        if (firestoreId != null && optionFirestoreId != null) {
+            database.vote(firestoreId, optionFirestoreId)
         }
     }
 
@@ -318,6 +348,7 @@ fun PollScreen(
                     }
                 }
             }
+
 
             // List of polls
             LazyColumn(
