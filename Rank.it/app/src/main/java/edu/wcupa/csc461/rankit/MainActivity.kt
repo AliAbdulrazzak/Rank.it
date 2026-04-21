@@ -138,6 +138,10 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
         _selectedCategory.value = category
     }
 
+    fun getRemainingVotes(): Int {
+        return database.getRemainingVotes()
+    }
+
     fun addCategory(name: String) {
         val trimmed = name.trim()
         if (trimmed.isNotEmpty() && !_categories.value.contains(trimmed)) {
@@ -187,43 +191,57 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
 
     // Business Logic - Upvote
     fun upvote(pollId: Int, optionId: Int) {
+
+        val poll = _polls.value.find { it.id == pollId } ?: return
+        val option = poll.options.find { it.id == optionId } ?: return
+
+        val success = database.vote(
+            poll.firestoreId,
+            option.firestoreId,
+            1
+        )
+
+        if (!success) return
+
         _polls.update { currentPolls ->
-            currentPolls.map { poll ->
-                if (poll.id == pollId) {
-                    poll.copy(
-                        options = poll.options.map { option ->
-                            if (option.id == optionId) option.copy(votes = option.votes + 1) else option
+            currentPolls.map { p ->
+                if (p.id == pollId) {
+                    p.copy(
+                        options = p.options.map {
+                            if (it.id == optionId) it.copy(votes = it.votes + 1)
+                            else it
                         }
                     )
-                } else poll
+                } else p
             }
-        }
-        val firestoreId = _polls.value
-            .find { it.id == pollId }
-            ?.firestoreId
-
-        val optionFirestoreId = _polls.value
-            .find { it.id == pollId }
-            ?.options
-            ?.find { it.id == optionId }
-            ?.firestoreId
-
-        if (firestoreId != null && optionFirestoreId != null) {
-            database.vote(firestoreId, optionFirestoreId)
         }
     }
 
     // Business Logic - Downvote
     fun downvote(pollId: Int, optionId: Int) {
+
+        val poll = _polls.value.find { it.id == pollId } ?: return
+        val option = poll.options.find { it.id == optionId } ?: return
+
+        val success = database.vote(
+            poll.firestoreId,
+            option.firestoreId,
+            -1   // 👈 THIS is the key
+        )
+
+        if (!success) return
+
         _polls.update { currentPolls ->
-            currentPolls.map { poll ->
-                if (poll.id == pollId) {
-                    poll.copy(
-                        options = poll.options.map { option ->
-                            if (option.id == optionId) option.copy(votes = (option.votes - 1).coerceAtLeast(0)) else option
+            currentPolls.map { p ->
+                if (p.id == pollId) {
+                    p.copy(
+                        options = p.options.map {
+                            if (it.id == optionId)
+                                it.copy(votes = (it.votes - 1).coerceAtLeast(0))
+                            else it
                         }
                     )
-                } else poll
+                } else p
             }
         }
     }
@@ -312,6 +330,9 @@ fun PollScreen(
     var showAddPollDialog by remember { mutableStateOf(false) }
     var addOptionPollId by remember { mutableStateOf<Int?>(null) }
 
+    val context = LocalContext.current
+    val remainingVotes = viewModel.getRemainingVotes()
+
     val filteredPolls = if (selectedCategory == "All") {
         allPolls
     } else {
@@ -319,7 +340,9 @@ fun PollScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
+
         Column(modifier = Modifier.fillMaxSize()) {
+
             // Category row with "+" button at the end
             LazyRow(
                 modifier = Modifier
@@ -349,6 +372,10 @@ fun PollScreen(
                 }
             }
 
+            Text(
+                text = "Votes remaining: $remainingVotes",
+                modifier = Modifier.padding(16.dp)
+            )
 
             // List of polls
             LazyColumn(

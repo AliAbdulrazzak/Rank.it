@@ -10,7 +10,13 @@ data class LoadedPoll(val firestoreId: String, val title: String, val filterCate
 class db private constructor(context: Context) {
 
     private val firestore = FirebaseFirestore.getInstance()
-    private val prefs = context.getSharedPreferences("votes", Context.MODE_PRIVATE)
+    private val prefs =
+        context.getSharedPreferences(
+            "votes", Context.MODE_PRIVATE
+        )
+
+    private val MAX_VOTES = 10
+    private val KEY_REMAINING = "remaining_votes"
 // manage db's singleton instance
     companion object {
         private var instance: db? = null
@@ -21,6 +27,13 @@ class db private constructor(context: Context) {
             }
             return instance!!
         }
+    }
+
+    fun getRemainingVotes(): Int {
+        if (!prefs.contains(KEY_REMAINING)) {
+            prefs.edit().putInt(KEY_REMAINING, MAX_VOTES).apply()
+        }
+        return prefs.getInt(KEY_REMAINING, MAX_VOTES)
     }
     // SECTION 1 : HANDLE WRITING TO DB
 // handle calls to create a new poll. saves title and its filter category
@@ -69,22 +82,29 @@ class db private constructor(context: Context) {
             .addOnFailureListener { Log.e("TEST", "Error", it) }
     }
 // manages votes placed on existing options
-fun vote(categoryId: String, optionId: String) {
-    if (prefs.getBoolean(optionId, false)) {
-        Log.d("TEST", "Already voted")
-        return
+fun vote(categoryId: String, optionId: String, delta: Int = 1): Boolean {
+    val remaining = getRemainingVotes()
+
+    if (remaining <= 0) {
+        Log.d("TEST", "No votes remaining")
+        return false
     }
 
     firestore.collection("categories")
         .document(categoryId)
         .collection("options")
         .document(optionId)
-        .update("score", FieldValue.increment(1))
+        .update("score", FieldValue.increment(delta.toLong()))
         .addOnSuccessListener {
             Log.d("TEST", "Vote recorded")
-            prefs.edit().putBoolean(optionId, true).apply()
+
+            prefs.edit()
+                .putInt(KEY_REMAINING, remaining - 1)
+                .apply()
         }
         .addOnFailureListener { Log.e("TEST", "Vote failed", it) }
+
+    return true
 }
 
     fun listen(categoryId: String) {
