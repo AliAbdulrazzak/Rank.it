@@ -1,6 +1,5 @@
 package edu.wcupa.csc461.rankit.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -21,21 +20,12 @@ private val LightColorScheme = lightColorScheme(
     primary = Red40,
     secondary = RedGrey40,
     tertiary = Green40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
 )
 
 @Composable
 fun RankitTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    fontScale: Float = 1.0f,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
@@ -52,7 +42,7 @@ fun RankitTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = getTypography(fontScale),
         content = content
     )
 }

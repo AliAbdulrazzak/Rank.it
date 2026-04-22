@@ -21,6 +21,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,6 +35,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -261,36 +266,76 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RankItApp() {
-    RankitTheme {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    
+    var showSettings by remember { mutableStateOf(false) }
+    var fontScale by remember { 
+        mutableStateOf(prefs.getFloat("font_scale", 1.0f)) 
+    }
+
+    RankitTheme(fontScale = fontScale) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Rank.it",
+                            text = if (showSettings) "Settings" else "Rank.it",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.headlineSmall
                         )
                     },
                     navigationIcon = {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_rankit_logo),
-                            contentDescription = "Rank.it logo",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .padding(horizontal = 8.dp)
-                                .size(40.dp)
-                        )
+                        if (showSettings) {
+                            IconButton(onClick = { showSettings = false }) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowBack,
+                                    contentDescription = "Back"
+                                )
+                            }
+                        } else {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_rankit_logo),
+                                contentDescription = "Rank.it logo",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .size(40.dp)
+                            )
+                        }
+                    },
+                    actions = {
+                        if (!showSettings) {
+                            IconButton(onClick = { showSettings = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings"
+                                )
+                            }
+                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 )
             }
         ) { innerPadding ->
-            PollScreen(modifier = Modifier.padding(innerPadding))
+            if (showSettings) {
+                SettingsScreen(
+                    fontScale = fontScale,
+                    onFontScaleChange = { newScale -> 
+                        fontScale = newScale
+                        prefs.edit().putFloat("font_scale", newScale).apply()
+                    },
+                    modifier = Modifier.padding(innerPadding)
+                )
+            } else {
+                PollScreen(modifier = Modifier.padding(innerPadding))
+            }
         }
     }
 }
