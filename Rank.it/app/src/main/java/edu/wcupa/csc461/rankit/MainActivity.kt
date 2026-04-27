@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import db
+import edu.wcupa.csc461.rankit.ui.theme.AppTheme
 import edu.wcupa.csc461.rankit.ui.theme.RankitTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -288,8 +290,22 @@ fun RankItApp() {
     var fontScale by remember { 
         mutableStateOf(prefs.getFloat("font_scale", 1.0f)) 
     }
+    
+    val systemInDarkTheme = isSystemInDarkTheme()
+    var darkTheme by remember {
+        mutableStateOf(prefs.getBoolean("dark_theme", systemInDarkTheme))
+    }
+    
+    var currentAppTheme by remember {
+        val themeName = prefs.getString("app_theme", AppTheme.DEFAULT.name)
+        mutableStateOf(AppTheme.valueOf(themeName ?: AppTheme.DEFAULT.name))
+    }
 
-    RankitTheme(fontScale = fontScale) {
+    RankitTheme(
+        fontScale = fontScale, 
+        darkTheme = darkTheme,
+        appTheme = currentAppTheme
+    ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
@@ -345,6 +361,16 @@ fun RankItApp() {
                     onFontScaleChange = { newScale -> 
                         fontScale = newScale
                         prefs.edit().putFloat("font_scale", newScale).apply()
+                    },
+                    darkTheme = darkTheme,
+                    onDarkThemeChange = { isDark ->
+                        darkTheme = isDark
+                        prefs.edit().putBoolean("dark_theme", isDark).apply()
+                    },
+                    currentAppTheme = currentAppTheme,
+                    onAppThemeChange = { newTheme ->
+                        currentAppTheme = newTheme
+                        prefs.edit().putString("app_theme", newTheme.name).apply()
                     },
                     modifier = Modifier.padding(innerPadding)
                 )
