@@ -17,6 +17,8 @@ class db private constructor(context: Context) {
 
     private val MAX_VOTES = 10
     private val KEY_REMAINING = "remaining_votes"
+    private val KEY_RESET_TIME = "reset_time"
+    private val RESET_INTERVAL_MS = 3 * 60 * 1000L
 // manage db's singleton instance
     companion object {
         private var instance: db? = null
@@ -27,6 +29,22 @@ class db private constructor(context: Context) {
             }
             return instance!!
         }
+    }
+
+    fun resetVotesIfNeeded() {
+        val now = System.currentTimeMillis()
+        val lastReset = prefs.getLong(KEY_RESET_TIME, 0L)
+        if (now - lastReset >= RESET_INTERVAL_MS) {
+            prefs.edit()
+                .putInt(KEY_REMAINING, MAX_VOTES)
+                .putLong(KEY_RESET_TIME, now)
+                .apply()
+        }
+    }
+
+    fun getTimeUntilReset(): Long {
+        val lastReset = prefs.getLong(KEY_RESET_TIME, 0L)
+        return (RESET_INTERVAL_MS - (System.currentTimeMillis() - lastReset)).coerceAtLeast(0L)
     }
 
     fun getRemainingVotes(): Int {

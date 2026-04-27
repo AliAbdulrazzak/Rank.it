@@ -60,13 +60,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import db
 import edu.wcupa.csc461.rankit.ui.theme.RankitTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 //test
 // 1. Data Models
@@ -102,7 +105,23 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
     private val _polls = MutableStateFlow(emptyList<Poll>())
     val polls: StateFlow<List<Poll>> = _polls.asStateFlow()
 
+    private val _remainingVotes = MutableStateFlow(database.getRemainingVotes())
+    val remainingVotes: StateFlow<Int> = _remainingVotes.asStateFlow()
+
+    private val _timeUntilReset = MutableStateFlow(0L)
+    val timeUntilReset: StateFlow<Long> = _timeUntilReset.asStateFlow()
+
     init {
+        database.resetVotesIfNeeded()
+        _remainingVotes.value = database.getRemainingVotes()
+        viewModelScope.launch {
+            while (true) {
+                database.resetVotesIfNeeded()
+                _remainingVotes.value = database.getRemainingVotes()
+                _timeUntilReset.value = database.getTimeUntilReset()
+                delay(1000L)
+            }
+        }
         loadFromDb()
     }
 
@@ -141,10 +160,6 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
-    }
-
-    fun getRemainingVotes(): Int {
-        return database.getRemainingVotes()
     }
 
     fun addCategory(name: String) {
@@ -370,13 +385,18 @@ fun PollScreen(
     val allPolls by viewModel.polls.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
+    val remainingVotes by viewModel.remainingVotes.collectAsStateWithLifecycle()
+    val timeUntilReset by viewModel.timeUntilReset.collectAsStateWithLifecycle()
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showAddPollDialog by remember { mutableStateOf(false) }
     var addOptionPollId by remember { mutableStateOf<Int?>(null) }
 
     val context = LocalContext.current
-    val remainingVotes = viewModel.getRemainingVotes()
+
+    val minutes = timeUntilReset / 60000
+    val seconds = (timeUntilReset % 60000) / 1000
+    val timerText = "%d:%02d".format(minutes, seconds)
 
     val filteredPolls = if (selectedCategory == "All") {
         allPolls
@@ -418,7 +438,7 @@ fun PollScreen(
             }
 
             Text(
-                text = "Votes remaining: $remainingVotes",
+                text = "Votes remaining: $remainingVotes  |  Resets in $timerText",
                 modifier = Modifier.padding(16.dp)
             )
 
