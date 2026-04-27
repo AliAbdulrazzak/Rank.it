@@ -34,6 +34,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -417,6 +418,7 @@ fun PollScreen(
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showAddPollDialog by remember { mutableStateOf(false) }
     var addOptionPollId by remember { mutableStateOf<Int?>(null) }
+    var showTrending by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
@@ -428,6 +430,12 @@ fun PollScreen(
         allPolls
     } else {
         allPolls.filter { it.category == selectedCategory }
+    }
+
+    val displayedPolls = if (showTrending) {
+        filteredPolls.sortedByDescending { poll -> poll.options.sumOf { it.votes } }
+    } else {
+        filteredPolls
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -474,7 +482,7 @@ fun PollScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(filteredPolls, key = { it.id }) { poll ->
+                items(displayedPolls, key = { it.id }) { poll ->
                     PollCard(
                         poll = poll,
                         onUpvote = { optionId -> viewModel.upvote(poll.id, optionId) },
@@ -483,6 +491,26 @@ fun PollScreen(
                     )
                 }
             }
+        }
+
+        // FAB to toggle trending mode (sort polls by total votes)
+        ExtendedFloatingActionButton(
+            onClick = { showTrending = !showTrending },
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
+            containerColor = if (showTrending)
+                MaterialTheme.colorScheme.tertiary
+            else
+                MaterialTheme.colorScheme.secondary
+        ) {
+            Text(
+                text = if (showTrending) "🔥 Trending ✓" else "🔥 Trending",
+                color = if (showTrending)
+                    MaterialTheme.colorScheme.onTertiary
+                else
+                    MaterialTheme.colorScheme.onSecondary
+            )
         }
 
         // FAB to add a new poll
