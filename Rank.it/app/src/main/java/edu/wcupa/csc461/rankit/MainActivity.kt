@@ -6,6 +6,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +42,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -199,7 +203,9 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
             currentPolls.map { poll ->
                 if (poll.id == pollId) {
                     poll.copy(options = poll.options + PollOption(
-                        nextId++, trimmed, "0",
+                        id = nextId++,
+                        firestoreId = "",
+                        name = trimmed,
                         votes = 0
                     ))
                 } else poll
@@ -739,6 +745,7 @@ fun PollCard(
     onAddOption: () -> Unit
 ) {
     val sortedOptions = poll.options.sortedByDescending { it.votes }
+    val totalVotes = poll.options.sumOf { it.votes }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -759,6 +766,7 @@ fun PollCard(
             sortedOptions.forEach { option ->
                 PollOptionRow(
                     option = option,
+                    totalVotes = totalVotes,
                     onUpvote = { onUpvote(option.id) },
                     onDownvote = { onDownvote(option.id) }
                 )
@@ -777,44 +785,72 @@ fun PollCard(
 @Composable
 fun PollOptionRow(
     option: PollOption,
+    totalVotes: Int,
     onUpvote: () -> Unit,
     onDownvote: () -> Unit
 ) {
-    Row(
+    val targetFraction = if (totalVotes > 0) option.votes.toFloat() / totalVotes else 0f
+    val animatedFraction by animateFloatAsState(
+        targetValue = targetFraction,
+        animationSpec = tween(durationMillis = 500),
+        label = "voteFraction"
+    )
+    val animatedVotes by animateIntAsState(
+        targetValue = option.votes,
+        animationSpec = tween(durationMillis = 500),
+        label = "voteCount"
+    )
+    val percent = (animatedFraction * 100).toInt()
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 4.dp)
     ) {
-        Text(
-            text = option.name,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Text(
-            text = "${option.votes}",
-            modifier = Modifier.padding(horizontal = 16.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Button(
-            onClick = onUpvote,
-            modifier = Modifier.padding(end = 4.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("▲")
+            Text(
+                text = option.name,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Text(
+                text = "$animatedVotes ($percent%)",
+                modifier = Modifier.padding(horizontal = 16.dp),
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Button(
+                onClick = onUpvote,
+                modifier = Modifier.padding(end = 4.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Text("▲")
+            }
+
+            Button(
+                onClick = onDownvote,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("▼")
+            }
         }
 
-        Button(
-            onClick = onDownvote,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-        ) {
-            Text("▼")
-        }
+        LinearProgressIndicator(
+            progress = { animatedFraction },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+                .height(6.dp),
+            color = MaterialTheme.colorScheme.tertiary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
     }
 }
 
