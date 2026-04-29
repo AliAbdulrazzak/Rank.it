@@ -192,18 +192,30 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
             _polls.update { polls ->
                 polls.map { p -> if (p.id == localId) p.copy(firestoreId = firestoreId) else p }
             }
-            optionNames.forEach { optionName -> database.addOption(firestoreId, optionName) }
+            options.forEach { opt ->
+                database.addOption(firestoreId, opt.name) { newOptionFsId ->
+                    _polls.update { polls ->
+                        polls.map { p ->
+                            if (p.id != localId) p
+                            else p.copy(options = p.options.map {
+                                if (it.id == opt.id) it.copy(firestoreId = newOptionFsId) else it
+                            })
+                        }
+                    }
+                }
+            }
         }
     }
 
     fun addOption(pollId: Int, optionName: String) {
         val trimmed = optionName.trim()
         if (trimmed.isEmpty()) return
+        val localOptionId = nextId++
         _polls.update { currentPolls ->
             currentPolls.map { poll ->
                 if (poll.id == pollId) {
                     poll.copy(options = poll.options + PollOption(
-                        id = nextId++,
+                        id = localOptionId,
                         firestoreId = "",
                         name = trimmed,
                         votes = 0
@@ -214,7 +226,16 @@ class PollViewModel(application: Application) : AndroidViewModel(application) {
 
         val firestoreId = _polls.value.find { it.id == pollId }?.firestoreId
         if (!firestoreId.isNullOrEmpty()) {
-            database.addOption(firestoreId, trimmed)
+            database.addOption(firestoreId, trimmed) { newOptionFsId ->
+                _polls.update { polls ->
+                    polls.map { p ->
+                        if (p.id != pollId) p
+                        else p.copy(options = p.options.map {
+                            if (it.id == localOptionId) it.copy(firestoreId = newOptionFsId) else it
+                        })
+                    }
+                }
+            }
         }
     }
 

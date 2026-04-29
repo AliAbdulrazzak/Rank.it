@@ -108,6 +108,11 @@ fun vote(categoryId: String, optionId: String, delta: Int = 1): Boolean {
         return false
     }
 
+    if (categoryId.isBlank() || optionId.isBlank()) {
+        Log.w("TEST", "Vote skipped: poll/option not yet synced to Firestore (categoryId='$categoryId', optionId='$optionId')")
+        return false
+    }
+
     firestore.collection("categories")
         .document(categoryId)
         .collection("options")
