@@ -150,7 +150,7 @@ Screenshots can be added here to demonstrate the application's interface.
 
 ## 👨‍💻 Author
 
-**Ali Abdulrazzak**
+**Ali Abdulrazzak** **Jordan Beirne**
 
 Computer Science — West Chester University
 
