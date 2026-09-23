@@ -1,55 +1,161 @@
-# CSC 461 - Final Group Project
+# Rank.it 📊
 
-## Purpose
+**Rank.it** is an Android application that allows users to create and participate in community-based rankings and voting.
 
+The project was developed as a group Android application for **CSC 461**, with an emphasis on mobile application development, persistent data, user interaction, navigation, and testing.
 
-The goal of the final project is for you to apply what you've learned to make your own Android app as a group. 
+## 📱 About the App
 
-This project is meant to exercise the design and programming tasks required to successfully complete any similar project that you choose to take on. In this project, you will make an app of original design that exercises different parts of an Android system. This includes persistence, interfacing with hardware, and navigating to different parts of the app.
+Rank.it gives users a way to create rankings and allow other users to vote on their choices.
 
-There are a number of stages that you should do:
+The application is designed to make ranking and voting simple, interactive, and community-driven.
 
-1. Plan your app.
-2. Create a mock up
-3. Document code and overall app with appropriate explanatory information
-4. Create tests for each function
-5. Make a final version
+## ✨ Features
 
+* Create and participate in rankings
+* Vote on different items
+* View community voting results
+* Persistent application data
+* Interactive Android user interface
+* Navigation between multiple screens
+* Real-time database functionality
+* Community-driven ranking system
 
-## Task
+## 🛠️ Technologies
 
-In a group of 3 to 5 students, you will develop an app of your own design.
+* **Kotlin**
+* **Android Studio**
+* **Jetpack Compose**
+* **Google Firebase**
+* **Google Database / Cloud Database**
+* **Git & GitHub**
 
-### Ideas
+## 🏗️ Project Structure
 
-Here are a few ideas for your app 
+```text
+Rank.it/
+│
+├── GroupKeys/
+│
+├── Rank.it/
+│   ├── app/
+│   └── ...
+│
+├── Rank.ItPolicy.html
+├── RankIt_Project_Proposal.pdf
+├── .gitignore
+└── README.md
+```
 
-1. A math or learning game
-2. A side or up scrolling game
-3. An personal inventory app with geolocated photos
-4. A video annotating app
-5. A school navigation app
-6. An assignment reminder app
-7. Anything else you may think of
+## 🚀 Getting Started
 
-### Testing
+### Prerequisites
 
-There are 2 types of testing that you'll want to consider. 
+To run Rank.it locally, you will need:
 
-1. functional testing: Does the app work as specified?
-2. performance testing: Does navigation make sense? Do things take an appropriate amount of time to do what they should?
+* Android Studio
+* Android SDK
+* JDK
+* A compatible Android device or emulator
+* Access to the project's Firebase configuration
 
+### Installation
 
+1. Clone the repository:
 
+```bash
+git clone https://github.com/AliAbdulrazzak/Rank.it.git
+```
 
-### Group member responsibility
+2. Open the project in **Android Studio**.
 
-Each member should take primary responsibility (design/documentation/development) for one part of the app, and they should have one part with secondary responsibility (testing/development/documentation).
+3. Allow Android Studio to download and synchronize the required Gradle dependencies.
 
-Responsibilities should be listed on the github project page for the group project.
+4. Configure the required Firebase services.
 
-### Submission
+5. Connect an Android device or start an Android emulator.
 
-All code produced, including testing code, during the exploration should be submitted to the group GitHub repositories. In addition, you should make an app submission to our shared google play store. Make sure to send the name of your app to the professor so that an app can be started with that name.
+6. Build and run the application.
 
+## 🔥 Database
 
+Rank.it uses a cloud-based database to store application data and support community voting.
+
+The database allows users to interact with shared ranking information rather than keeping the data exclusively on the user's device.
+
+## 🧪 Testing
+
+The project includes testing as part of the development process.
+
+Testing focuses on:
+
+* Functional correctness
+* User interaction
+* Navigation
+* Data persistence
+* Application performance
+
+## 👥 Team Development
+
+Rank.it was developed collaboratively as a group project.
+
+Team responsibilities included:
+
+* Application design
+* Android development
+* Database integration
+* User interface development
+* Testing
+* Documentation
+* Git/GitHub collaboration
+
+## 🔐 Privacy
+
+The project includes a privacy policy describing the application's data practices.
+
+See:
+
+`Rank.ItPolicy.html`
+
+## 📄 Project Documentation
+
+Additional project documentation can be found in:
+
+* `RankIt_Project_Proposal.pdf`
+* `Rank.ItPolicy.html`
+
+## 🎯 Project Goals
+
+The primary goals of Rank.it were to:
+
+* Apply Android development concepts
+* Build an original mobile application
+* Work with persistent data
+* Implement multiple application screens
+* Practice collaborative software development
+* Apply software testing principles
+* Deploy a functional Android application
+
+## 📸 Screenshots
+
+Screenshots can be added here to demonstrate the application's interface.
+
+```markdown
+![Rank.it Home Screen](screenshots/home.png)
+
+![Rank.it Ranking Screen](screenshots/ranking.png)
+
+![Rank.it Results](screenshots/results.png)
+```
+
+## 👨‍💻 Author
+
+**Ali Abdulrazzak**
+
+Computer Science — West Chester University
+
+GitHub: [AliAbdulrazzak](https://github.com/AliAbdulrazzak)
+
+## 📜 License
+
+This project was developed as an academic project for CSC 461.
